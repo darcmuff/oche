@@ -140,7 +140,11 @@ table.league tr:first-child td{color:var(--brass)}
 table.league tr:last-child td{border-bottom:none}
 .tip{font-size:12.5px;color:var(--ink-soft);border:1px dashed var(--line);border-radius:var(--r);padding:8px 10px;margin:0 0 12px;line-height:1.35}
 .clearbtn{border:1px solid var(--line);background:var(--slate-2);padding:7px 12px;border-radius:var(--r);font-size:13px;color:var(--ink-soft)}
-.note{font-size:12.5px;color:var(--ink-soft);margin:0;text-align:center;flex:0 0 auto;min-height:17px}
+.foot{display:flex;align-items:center;gap:8px;flex:0 0 auto;padding-top:4px}
+.note{font-size:12.5px;color:var(--ink-soft);margin:0;text-align:center;flex:1;min-height:17px}
+.abandon{font-size:12px;color:var(--bust);border:1px solid var(--bust);border-radius:var(--r);padding:4px 9px;flex:0 0 auto;opacity:.85}
+.resumerow{display:flex;gap:6px;margin-bottom:8px}
+.resumerow .resume{margin-bottom:0}
 .win{text-align:center;padding:16px 12px;border:2px solid var(--brass);background:var(--slate-2);border-radius:var(--r);margin-bottom:8px;flex:0 0 auto}
 .win h2{font-size:24px;line-height:1.1}
 .win p{margin:2px 0 0;color:var(--ink-soft);font-size:13px}
@@ -155,7 +159,10 @@ table.league tr:last-child td{border-bottom:none}
 
   <!-- SETUP -->
   <section id="setup" class="pane">
-    <button class="resume hide" id="resume">Resume the match in progress</button>
+    <div class="resumerow hide" id="resumeRow">
+      <button class="resume" id="resume">Resume the match in progress</button>
+      <button class="abandon" id="dropMatch" style="padding:8px 12px">Bin it</button>
+    </div>
     <p class="tip hide" id="tip"></p>
 
     <div class="field">
@@ -193,7 +200,10 @@ table.league tr:last-child td{border-bottom:none}
     <div id="winner" class="hide"></div>
     <div id="scoreboard"></div>
     <div id="controls"></div>
-    <p class="note" id="note"></p>
+    <div class="foot">
+      <p class="note" id="note"></p>
+      <button class="abandon" id="abandon">Abandon</button>
+    </div>
   </section>
 </div>
 
@@ -417,9 +427,18 @@ function toSetup(){
   el("mast").classList.remove("hide");
   el("match").classList.add("hide");
   el("setup").classList.remove("hide");
-  el("resume").classList.toggle("hide", !(M && !M.over));
+  el("resumeRow").classList.toggle("hide", !(M && !M.over));
   drawLeague();
 }
+function dropMatch(){ M=null; wipe(); toSetup(); }
+el("abandon").addEventListener("click",function(){
+  if(M && !M.over && !confirm("Abandon this match? It won't count in the league table.")) return;
+  dropMatch();
+});
+el("dropMatch").addEventListener("click",function(){
+  if(!confirm("Bin the match in progress?")) return;
+  dropMatch();
+});
 el("back").addEventListener("click",function(){ if(M&&!M.over) save(); else wipe(); toSetup(); });
 el("undo").addEventListener("click",function(){
   if(!M||!M.history.length){ M.msg="Nothing left to undo."; render(); return; }
@@ -499,6 +518,7 @@ function render(){
   else if(M.game==="clock") renderClock(sb,ct);
   else renderX01(sb,ct);
   el("note").textContent=M.msg||"";
+  el("abandon").textContent = M.over ? "Clear" : "Abandon";
 }
 function renderX01(sb,ct){
   sb.innerHTML='<div class="board">'+M.p.map(function(p,i){
@@ -568,7 +588,7 @@ document.addEventListener("keydown",function(e){
 
 /* ---- resume ---- */
 var saved=load();
-if(saved&&saved.p&&saved.p.length&&!saved.over) el("resume").classList.remove("hide");
+if(saved&&saved.p&&saved.p.length&&!saved.over) el("resumeRow").classList.remove("hide");
 })();
 </script>
 </body>
