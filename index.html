@@ -379,10 +379,20 @@ drawGames(); drawCount(); drawPlayers(); drawOpts(); drawLeague();
   });
 })();
 
-el("clearLeague").addEventListener("click",function(){
-  if(!confirm("Wipe every result from the league table?")) return;
-  saveLeague({}); drawLeague();
-});
+(function(){
+  var btn=el("clearLeague"), backup=null, t=null;
+  btn.addEventListener("click",function(){
+    if(backup){
+      clearTimeout(t); saveLeague(backup); backup=null;
+      btn.textContent="Clear the table"; drawLeague(); return;
+    }
+    backup=loadLeague(); saveLeague({}); drawLeague();
+    btn.classList.remove("hide"); el("leagueWrap").classList.remove("hide");
+    el("league").innerHTML="";
+    btn.textContent="Undo that";
+    t=setTimeout(function(){ backup=null; btn.textContent="Clear the table"; drawLeague(); },8000);
+  });
+})();
 
 el("games").addEventListener("click",function(e){var b=e.target.closest(".game");if(!b)return;setup.game=b.dataset.g;drawGames();drawOpts();});
 el("opts").addEventListener("click",function(e){
@@ -431,14 +441,8 @@ function toSetup(){
   drawLeague();
 }
 function dropMatch(){ M=null; wipe(); toSetup(); }
-el("abandon").addEventListener("click",function(){
-  if(M && !M.over && !confirm("Abandon this match? It won't count in the league table.")) return;
-  dropMatch();
-});
-el("dropMatch").addEventListener("click",function(){
-  if(!confirm("Bin the match in progress?")) return;
-  dropMatch();
-});
+el("abandon").addEventListener("click",dropMatch);
+el("dropMatch").addEventListener("click",dropMatch);
 el("back").addEventListener("click",function(){ if(M&&!M.over) save(); else wipe(); toSetup(); });
 el("undo").addEventListener("click",function(){
   if(!M||!M.history.length){ M.msg="Nothing left to undo."; render(); return; }
