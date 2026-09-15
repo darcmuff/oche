@@ -1,5 +1,5 @@
 /* Oche — keep the scorer usable with flaky pub Wi-Fi */
-var CACHE = 'oche-v2';
+var CACHE = 'oche-v3';
 var SHELL = ['./', './index.html', './sw.js'];
 
 self.addEventListener('install', function (e) {
