@@ -63,9 +63,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-
 #setup > .field:first-of-type{flex:1 1 auto} /* games eat leftover space */
 .field{margin-bottom:8px;flex:0 0 auto}
 .field h2{font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;font-family:Karla,sans-serif;font-style:italic}
-.games{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;flex:1 1 auto;min-height:0}
+.games{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr 1fr;gap:6px;flex:1 1 auto;min-height:0}
 .game{padding:10px 12px;background:var(--slate-2);border:2px solid var(--line);border-radius:var(--r);text-align:left;display:flex;flex-direction:column;justify-content:center;min-height:0}
-.game b{display:block;font-family:Oswald,sans-serif;font-size:clamp(20px,5.2vw,26px);font-weight:600;line-height:1.05}
+.game b{display:block;font-family:Oswald,sans-serif;font-size:clamp(17px,4.4vw,22px);font-weight:600;line-height:1.05}
 .game span{display:none;font-size:11.5px;color:var(--ink-soft);line-height:1.2;margin-top:3px}
 .game[aria-pressed="true"]{background:var(--ink);color:var(--slate);border-color:var(--ink);box-shadow:none}
 .game[aria-pressed="true"] span{display:block;color:inherit;opacity:.78}
@@ -232,8 +232,12 @@ var GAMES = [
   {id:"501", name:"501", blurb:"Straight in. The proper one."},
   {id:"301", name:"301", blurb:"Shorter. Fewer excuses."},
   {id:"cricket", name:"Cricket", blurb:"Shut 20 down to 15, then the bull."},
-  {id:"clock", name:"Round the clock", blurb:"1 to 20, then the bull."}
+  {id:"clock", name:"Round the clock", blurb:"1 to 20, then the bull."},
+  {id:"shanghai", name:"Shanghai", blurb:"Rounds 1–7. Shanghai wins it."},
+  {id:"halve", name:"Halve-it", blurb:"Hit the target or your score halves."}
 ];
+var SH_ROUNDS = [1,2,3,4,5,6,7];
+var HV_TARGETS = [20,19,18,17,16,15,25]; /* 25 = bull */
 var CK_TARGETS = [20,19,18,17,16,15,25];
 
 /* checkout finder */
@@ -416,8 +420,14 @@ function drawOpts(){
       '<p class="rulenote">'+(setup.doubleOut?"Last dart must land in a double or the bull.":"Any dart that hits zero wins the leg.")+' First to '+setup.legs+' leg'+(setup.legs>1?"s":"")+' takes the match.</p>';
   } else if(setup.game==="cricket"){
     o.innerHTML='<p class="rulenote">Tap a number to chalk a mark. Three marks shuts it, and after that you score on it until everyone else shuts it too. Board shut with the most points wins.</p>';
-  } else {
+  } else if(setup.game==="clock"){
     o.innerHTML='<p class="rulenote">Three darts a visit. Hit your number to move up. First to close the bull wins, and the app counts your darts so you can chase your own record.</p>';
+  } else if(setup.game==="shanghai"){
+    o.innerHTML='<p class="rulenote">Seven rounds, numbers 1 to 7. Score singles, doubles and trebles of that number only. Hit single + double + treble in one visit for Shanghai and you win on the spot. Highest score after 7 otherwise.</p>';
+  } else if(setup.game==="halve"){
+    o.innerHTML='<p class="rulenote">Everyone starts on 40. Targets: 20 down to 15, then bull. Score on the target or tap Halve — miss and your total is cut in half. Highest after the last target wins.</p>';
+  } else {
+    o.innerHTML='';
   }
 }
 drawGames(); drawCount(); drawPlayers(); drawOpts(); drawLeague();
@@ -492,9 +502,11 @@ document.addEventListener('visibilitychange',function(){
 /* ---- match ---- */
 function begin(){
   var names=setup.names.map(function(n,i){return (n||"").trim()||("Player "+(i+1));});
-  var start=setup.game==="301"?301:501;
-  M={game:setup.game,doubleOut:setup.doubleOut,legsTarget:setup.legs,start:start,
+  var g=setup.game;
+  var start = g==="301"?301 : (g==="501"?501 : (g==="halve"?40 : 0));
+  M={game:g,doubleOut:setup.doubleOut,legsTarget:setup.legs,start:start,
      turn:0,starter:0,over:null,winner:null,recorded:false,msg:"",history:[],
+     round:0, /* shanghai / halve index into targets */
      p:names.map(function(n){return {name:n,score:start,legs:0,darts:0,scored:0,marks:{},pts:0,tgt:1,visit:0};})};
   setup.names=names.slice(); saveNames();
   entry=""; show(); save();
@@ -502,7 +514,30 @@ function begin(){
 function label(){
   if(M.game==="cricket") return "Cricket";
   if(M.game==="clock") return "Round the clock";
+  if(M.game==="shanghai") return "Shanghai · 1–7";
+  if(M.game==="halve") return "Halve-it";
   return M.start+" · "+(M.doubleOut?"double out":"straight out")+" · first to "+M.legsTarget;
+}
+function shTarget(){ return SH_ROUNDS[M.round]||SH_ROUNDS[SH_ROUNDS.length-1]; }
+function hvTarget(){ return HV_TARGETS[M.round]||HV_TARGETS[HV_TARGETS.length-1]; }
+function hvLabel(t){ return t===25?"bull":String(t); }
+function finishByScore(){
+  var best=-1, winners=[];
+  M.p.forEach(function(p){
+    if(p.score>best){ best=p.score; winners=[p.name]; }
+    else if(p.score===best) winners.push(p.name);
+  });
+  if(winners.length===1){ M.winner=winners[0]; M.over=winners[0]+" takes it with "+best; }
+  else { M.winner=winners[0]; M.over="Tie on "+best+" — "+winners.join(" & "); }
+}
+function advanceRoundGame(){
+  /* after a full lap of turns, next target — or finish */
+  if(M.turn!==M.starter) return;
+  if(M.round>=(M.game==="shanghai"?SH_ROUNDS.length:HV_TARGETS.length)-1){
+    finishByScore();
+  } else {
+    M.round++;
+  }
 }
 function show(){
   el("mast").classList.add("hide");
@@ -583,6 +618,44 @@ function clockThrow(hit){
   if(!M.over&&p.visit>=3){ p.visit=0; next(); }
   M.msg=""; render(); save();
 }
+function shanghaiScore(v, shanghai){
+  if(M.over) return;
+  snap();
+  var p=M.p[M.turn], n=shTarget();
+  p.darts+=3;
+  if(shanghai){
+    p.score+=6*n; p.scored+=6*n;
+    M.winner=p.name; M.over=p.name+" hits Shanghai on "+n+"!";
+  } else {
+    if(v<0) v=0;
+    if(v>9*n){ M.history.pop(); M.msg="Max on "+n+" is "+(9*n)+" (three trebles)."; render(); return; }
+    p.score+=v; p.scored+=v;
+    M.msg = v ? (p.name+" scores "+v+" on "+n+".") : (p.name+" blanks "+n+".");
+    next();
+    if(!M.over) advanceRoundGame();
+  }
+  entry=""; render(); save();
+}
+function halveScore(v, halved){
+  if(M.over) return;
+  snap();
+  var p=M.p[M.turn], t=hvTarget();
+  p.darts+=3;
+  if(halved || v===0){
+    var before=p.score;
+    p.score=Math.floor(p.score/2);
+    M.msg=p.name+" halves "+before+" → "+p.score+".";
+  } else {
+    var cap = t===25 ? 150 : 9*t; /* three double-bulls = 150 */
+    if(v<0) v=0;
+    if(v>cap){ M.history.pop(); M.msg="That visit's too high for "+hvLabel(t)+"."; render(); return; }
+    p.score+=v; p.scored+=v;
+    M.msg=p.name+" scores "+v+" on "+hvLabel(t)+".";
+  }
+  next();
+  if(!M.over) advanceRoundGame();
+  entry=""; render(); save();
+}
 
 /* ---- render ---- */
 function avg(p){ return p.darts? (p.scored/p.darts*3).toFixed(1)+" avg" : ""; }
@@ -600,6 +673,8 @@ function render(){
   }
   if(M.game==="cricket") renderCricket(sb,ct);
   else if(M.game==="clock") renderClock(sb,ct);
+  else if(M.game==="shanghai") renderShanghai(sb,ct);
+  else if(M.game==="halve") renderHalve(sb,ct);
   else renderX01(sb,ct);
   el("note").textContent=M.msg||"";
   el("abandon").textContent = M.over ? "Clear" : "Abandon";
@@ -647,6 +722,52 @@ function renderClock(sb,ct){
   if(!M.over) M.msg="Dart "+(M.p[M.turn].visit+1)+" of 3 — "+M.p[M.turn].name;
 }
 
+function renderRoundBoard(sb, title){
+  sb.innerHTML='<div class="board">'+M.p.map(function(p,i){
+    var on=i===M.turn&&!M.over;
+    return '<div class="pl'+(on?" on":"")+'">'+
+      '<div class="who">'+p.name+'</div>'+
+      '<div class="rem num">'+p.score+'</div>'+
+      '<div class="meta">'+(on?title:"")+'</div><div class="avg"></div></div>';
+  }).join("")+'</div>';
+}
+function renderShanghai(sb,ct){
+  var n=shTarget();
+  var title = M.over?"" : ("Round "+(M.round+1)+" of 7 — score on "+n);
+  renderRoundBoard(sb, title);
+  if(M.over){ ct.innerHTML=""; return; }
+  ct.innerHTML='<div class="quick">'+
+    '<button data-sh="0">Miss</button>'+
+    '<button data-sh="'+n+'">S'+n+'</button>'+
+    '<button data-sh="'+(2*n)+'">D'+n+'</button>'+
+    '<button data-sh="'+(3*n)+'">T'+n+'</button>'+
+    '<button data-sh="'+(6*n)+'" data-shanghai="1">Shanghai</button>'+
+    '<button data-sh="'+(9*n)+'">3×T</button>'+
+    '</div>'+
+    '<div class="entry" id="entry">'+(entry===""?"&nbsp;":entry)+'</div>'+
+    '<div class="pad">'+[1,2,3,4,5,6,7,8,9].map(function(k){return '<button data-k="'+k+'">'+k+'</button>';}).join("")+
+      '<button data-k="0">0</button><button class="clr" data-k="c">Clear</button>'+
+      '<button class="no" data-k="b">Miss</button><button class="ok" data-k="sh">Enter</button></div>';
+  if(!M.over) M.msg = M.msg || (M.p[M.turn].name+" — hit "+n+"s");
+}
+function renderHalve(sb,ct){
+  var tg=hvTarget(), lab=hvLabel(tg);
+  var title = M.over?"" : ("Target "+lab+" · start from 40");
+  renderRoundBoard(sb, title);
+  if(M.over){ ct.innerHTML=""; return; }
+  var singles = tg===25 ? [25,50] : [tg,2*tg,3*tg,6*tg,9*tg];
+  var labels = tg===25 ? ["25","Bull"] : ["S"+tg,"D"+tg,"T"+tg,"2×T","3×T"];
+  ct.innerHTML='<div class="quick">'+
+    '<button data-hv="0" data-halve="1">Halve</button>'+
+    singles.map(function(v,i){return '<button data-hv="'+v+'">'+labels[i]+'</button>';}).join("")+
+    '</div>'+
+    '<div class="entry" id="entry">'+(entry===""?"&nbsp;":entry)+'</div>'+
+    '<div class="pad">'+[1,2,3,4,5,6,7,8,9].map(function(k){return '<button data-k="'+k+'">'+k+'</button>';}).join("")+
+      '<button data-k="0">0</button><button class="clr" data-k="c">Clear</button>'+
+      '<button class="no" data-k="hv0">Halve</button><button class="ok" data-k="hv">Enter</button></div>';
+  if(!M.over) M.msg = M.msg || (M.p[M.turn].name+" — "+lab+" or halve");
+}
+
 /* ---- input ---- */
 el("controls").addEventListener("click",function(e){
   var c=e.target.closest("td.cell");
@@ -654,19 +775,24 @@ el("controls").addEventListener("click",function(e){
   var b=e.target.closest("button"); if(!b) return;
   if(b.id==="ckNext"){ ckNext(); return; }
   if(b.dataset.h!==undefined){ clockThrow(b.dataset.h==="1"); return; }
+  if(b.dataset.sh!==undefined){ shanghaiScore(+b.dataset.sh, b.dataset.shanghai==="1"); return; }
+  if(b.dataset.hv!==undefined){ halveScore(+b.dataset.hv, b.dataset.halve==="1"); return; }
   if(b.dataset.q!==undefined){ entry=b.dataset.q; submitScore(); return; }
   var k=b.dataset.k; if(k===undefined) return;
   if(k==="c"){ entry=""; M.msg=""; render(); }
   else if(k==="b"){ entry="0"; submitScore(); }
   else if(k==="e"){ submitScore(); }
+  else if(k==="sh"){ shanghaiScore(parseInt(entry,10)||0, false); }
+  else if(k==="hv"){ var vv=parseInt(entry,10); if(isNaN(vv)){ M.msg="Tap a score or Halve."; render(); return; } halveScore(vv, false); }
+  else if(k==="hv0"){ halveScore(0, true); }
   else { if(entry.length<3){ entry=(entry+k).replace(/^0+(?=\d)/,""); } el("entry").textContent=entry||" "; }
 });
 document.addEventListener("keydown",function(e){
   if(!M||el("match").classList.contains("hide")) return;
-  if(M.game!=="501"&&M.game!=="301") return;
+  if(M.game!=="501"&&M.game!=="301"&&M.game!=="shanghai"&&M.game!=="halve") return;
   if(document.activeElement&&document.activeElement.tagName==="INPUT") return;
   if(/^[0-9]$/.test(e.key)){ if(entry.length<3) entry=(entry+e.key).replace(/^0+(?=\d)/,""); render(); }
-  else if(e.key==="Enter"){ e.preventDefault(); submitScore(); }
+  else if(e.key==="Enter"){ e.preventDefault(); if(M.game==="shanghai") shanghaiScore(parseInt(entry,10)||0,false); else if(M.game==="halve"){ var vv=parseInt(entry,10); if(isNaN(vv)){ M.msg="Tap a score or Halve."; render(); return; } halveScore(vv,false);} else submitScore(); }
   else if(e.key==="Backspace"){ entry=entry.slice(0,-1); render(); }
 });
 
