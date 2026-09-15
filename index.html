@@ -20,7 +20,7 @@
 :root{
   --slate:#F2ECDD; --slate-2:#E7DFCB; --ink:#1E2321; --ink-soft:#3F4541;
   --line:#A89B7E; --wire:#8E8778; --green:#1C6B45; --brass:#A5761B; --bust:#B3332B;
-  --r:3px; color-scheme:light;
+  --r:12px; color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -139,7 +139,7 @@ table.ck tfoot td{font-family:Oswald,sans-serif;font-size:19px;background:var(--
 .pclock.on{box-shadow:inset 4px 0 0 var(--brass);background:var(--slate-2)}
 .pclock .hdr{display:flex;justify-content:space-between;font-size:13.5px;font-weight:600}
 .clock{display:grid;grid-template-columns:repeat(11,1fr);gap:3px;margin-top:5px}
-.clock div{border:1px solid var(--line);padding:4px 0;text-align:center;font-family:Oswald,sans-serif;font-size:12px;border-radius:2px}
+.clock div{border:1px solid var(--line);padding:4px 0;text-align:center;font-family:Oswald,sans-serif;font-size:12px;border-radius:6px}
 .clock div.done{background:var(--green);border-color:var(--green);color:#fff}
 .clock div.now{border-color:var(--brass);box-shadow:inset 0 -3px 0 var(--brass)}
 .hitmiss{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:0 0 auto;height:clamp(58px,11vh,88px)}
