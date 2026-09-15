@@ -413,6 +413,22 @@ el("players").addEventListener("input",function(e){ if(e.target.dataset.i!==unde
 el("start").addEventListener("click",begin);
 el("resume").addEventListener("click",function(){ var s=load(); if(s){ M=s; M.history=M.history||[]; show(); } });
 
+/* ---- wake lock (keep screen on in a match) ---- */
+var wake=null;
+function keepAwake(){
+  if(!('wakeLock' in navigator)) return;
+  navigator.wakeLock.request('screen').then(function(lock){
+    wake=lock;
+    wake.addEventListener('release',function(){ wake=null; });
+  }).catch(function(){});
+}
+function letSleep(){
+  if(wake){ try{ wake.release(); }catch(e){} wake=null; }
+}
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible' && M && !el('match').classList.contains('hide')) keepAwake();
+});
+
 /* ---- match ---- */
 function begin(){
   var names=setup.names.map(function(n,i){return (n||"").trim()||("Player "+(i+1));});
@@ -433,8 +449,10 @@ function show(){
   el("match").classList.remove("hide");
   el("gname").textContent=label();
   render();
+  keepAwake();
 }
 function toSetup(){
+  letSleep();
   el("mast").classList.remove("hide");
   el("match").classList.add("hide");
   el("setup").classList.remove("hide");
