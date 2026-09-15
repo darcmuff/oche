@@ -48,17 +48,17 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-
 /* setup — fill height, never scroll the page */
 #setup{overflow:hidden;display:flex;flex-direction:column;min-height:0;gap:0;flex:1}
 #setup > .field{display:flex;flex-direction:column;min-height:0}
-#setup > .field:first-of-type{flex:1 1 0;min-height:0} /* games eat leftover; league is capped */
+#setup > .field:first-of-type{flex:1 1 0;min-height:0;overflow:hidden} /* games eat leftover; never spill */
 .field{margin-bottom:8px;flex:0 0 auto}
 .field h2{font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;font-family:Karla,sans-serif;font-style:italic}
-.games{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr 1fr;gap:6px;flex:1 1 0;min-height:0}
-.game{padding:10px 12px;background:var(--slate-2);border:2px solid var(--line);border-radius:var(--r);text-align:left;display:flex;flex-direction:column;justify-content:center;min-height:0}
-.game b{display:block;font-family:Oswald,sans-serif;font-size:clamp(17px,4.4vw,22px);font-weight:600;line-height:1.05}
-.game span{display:none;font-size:11.5px;color:var(--ink-soft);line-height:1.2;margin-top:3px}
+.games{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,minmax(40px,1fr));gap:5px;flex:1 1 auto;min-height:120px;max-height:100%;overflow:hidden}
+.game{padding:6px 10px;background:var(--slate-2);border:2px solid var(--line);border-radius:var(--r);text-align:left;display:flex;flex-direction:column;justify-content:center;min-height:0;overflow:hidden}
+.game b{display:block;font-family:Oswald,sans-serif;font-size:clamp(15px,4vw,20px);font-weight:600;line-height:1.05}
+.game span{display:none} /* blurbs off on home — selected tile stays even height */
 .game[aria-pressed="true"]{background:var(--ink);color:var(--slate);border-color:var(--ink);box-shadow:none}
-.game[aria-pressed="true"] span{display:block;color:inherit;opacity:.78}
-.seg{display:flex;gap:6px;flex-wrap:wrap}
-.seg button{flex:1;min-width:48px;min-height:44px;padding:8px 6px;border:2px solid var(--line);background:var(--slate-2);border-radius:var(--r);font-family:Oswald,sans-serif;font-size:clamp(15px,3.8vw,18px);font-weight:500}
+.game[aria-pressed="true"] span{display:none}
+.seg{display:flex;gap:5px;flex-wrap:wrap}
+.seg button{flex:1;min-width:44px;min-height:40px;padding:6px 5px;border:2px solid var(--line);background:var(--slate-2);border-radius:var(--r);font-family:Oswald,sans-serif;font-size:clamp(14px,3.6vw,17px);font-weight:500}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--slate);border-color:var(--ink)}
 .players{display:grid;gap:6px;margin-top:6px}
 .roster{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-height:34px;overflow:hidden}
@@ -67,9 +67,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-
 .roster button:active{background:var(--ink);color:var(--slate);border-color:var(--ink)}
 .prow{display:flex;gap:8px;align-items:center}
 .prow .pip{font-family:Oswald,sans-serif;font-size:16px;font-weight:600;color:var(--wire);width:16px;text-align:center}
-input[type=text]{flex:1;min-width:0;padding:9px 11px;background:transparent;border:2px solid var(--line);border-bottom:3px solid var(--wire);border-radius:var(--r);color:var(--ink);font-size:16px;font-weight:600}
+input[type=text]{flex:1;min-width:0;padding:7px 10px;background:transparent;border:2px solid var(--line);border-bottom:3px solid var(--wire);border-radius:var(--r);color:var(--ink);font-size:16px;font-weight:600}
 .rulenote{display:none} /* selected game tile already carries the blurb; saves a scroll */
-.throw{width:100%;padding:14px;background:var(--ink);color:var(--slate);font-family:Oswald,sans-serif;font-size:clamp(20px,5vw,24px);font-weight:600;letter-spacing:.06em;border-radius:var(--r);flex:0 0 auto;margin-top:8px}
+.throw{width:100%;padding:12px;background:var(--ink);color:var(--slate);font-family:Oswald,sans-serif;font-size:clamp(18px,4.6vw,22px);font-weight:600;letter-spacing:.06em;border-radius:var(--r);flex:0 0 auto;margin-top:6px}
 .resume{width:100%;padding:10px;margin-bottom:6px;border:2px solid var(--brass);color:var(--brass);border-radius:var(--r);font-size:14px;font-weight:600;flex:0 0 auto}
 .resumerow{display:flex;gap:8px;align-items:stretch;margin-bottom:6px;flex:0 0 auto}
 .resumerow .resume{margin-bottom:0;flex:1}
@@ -80,7 +80,7 @@ input[type=text]{flex:1;min-width:0;padding:9px 11px;background:transparent;bord
 table.league td{font-size:14px;padding:3px 5px}
 table.league th{padding:0 5px 2px;font-size:11px}
 table.league thead th{position:sticky;top:0;background:var(--slate);z-index:1}
-.tip{font-size:12px;padding:6px 8px;margin:0 0 6px}
+.tip{font-size:12px;padding:5px 8px;margin:0 0 6px;flex:0 0 auto;line-height:1.25}
 
 /* match chrome */
 
@@ -149,7 +149,8 @@ table.league td{font-family:Oswald,sans-serif;font-size:17px;text-align:right;pa
 table.league td:first-child{text-align:left;font-family:Karla,sans-serif;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40%}
 table.league tr:first-child td{color:var(--brass)}
 table.league tr:last-child td{border-bottom:none}
-.tip{font-size:12.5px;color:var(--ink-soft);border:1px dashed var(--line);border-radius:var(--r);padding:8px 10px;margin:0 0 12px;line-height:1.35}
+.tip{font-size:12px;color:var(--ink-soft);border:1px dashed var(--line);border-radius:var(--r);padding:5px 8px;margin:0 0 6px;line-height:1.25;flex:0 0 auto}
+.tip .clearbtn{display:inline;margin:0 0 0 6px;padding:2px 8px;font-size:11px;vertical-align:baseline}
 .clearbtn{border:1px solid var(--line);background:var(--slate-2);padding:7px 12px;border-radius:var(--r);font-size:13px;color:var(--ink-soft)}
 .foot{display:flex;align-items:center;gap:8px;flex:0 0 auto;padding-top:4px}
 .note{font-size:12.5px;color:var(--ink-soft);margin:0;text-align:center;flex:1;min-height:17px}
@@ -435,10 +436,10 @@ drawGames(); drawCount(); drawPlayers(); drawOpts(); drawLeague();
   try{ if(localStorage.getItem("oche:tip")==="off") return; }catch(e){}
   var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
   var t=el("tip");
-  t.innerHTML = "Keep it on your phone: " + (ios
-    ? "tap Share, then <b>Add to Home Screen</b>."
-    : "open the browser menu, then <b>Install app</b> or <b>Add to Home screen</b>.") +
-    " It opens full screen, no browser bars. <button class=\"clearbtn\" id=\"tipOff\" style=\"margin-top:6px;display:block\">Got it</button>";
+  t.innerHTML = (ios
+    ? "Add to Home Screen via Share for full-screen."
+    : "Install / Add to Home screen for full-screen.") +
+    ' <button class="clearbtn" id="tipOff">Got it</button>';
   t.classList.remove("hide");
   el("tipOff").addEventListener("click",function(){
     t.classList.add("hide");
