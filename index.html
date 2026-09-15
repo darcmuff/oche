@@ -667,7 +667,16 @@ if(saved&&saved.p&&saved.p.length&&!saved.over) el("resumeRow").classList.remove
 
 /* ---- offline ---- */
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("./sw.js").catch(function(){});
+  navigator.serviceWorker.register("./sw.js").then(function(reg){
+    if(reg.waiting){ try{ reg.waiting.postMessage({type:"SKIP_WAITING"}); }catch(e){} }
+    reg.update();
+  }).catch(function(){});
+  navigator.serviceWorker.addEventListener("controllerchange", function(){
+    /* new SW took over — one reload to pick up fresh HTML */
+    if(window.__ocheReloaded) return;
+    window.__ocheReloaded=true;
+    location.reload();
+  });
 }
 })();
 </script>
