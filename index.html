@@ -72,10 +72,13 @@ input[type=text]{flex:1;min-width:0;padding:9px 11px;background:transparent;bord
 .resume{width:100%;padding:10px;margin-bottom:6px;border:2px solid var(--brass);color:var(--brass);border-radius:var(--r);font-size:14px;font-weight:600;flex:0 0 auto}
 .resumerow{display:flex;gap:8px;align-items:stretch;margin-bottom:6px;flex:0 0 auto}
 .resumerow .resume{margin-bottom:0;flex:1}
-#leagueWrap{margin-top:8px !important;flex:0 0 auto;min-height:0}
-#leagueWrap h2{font-size:12px;margin-bottom:4px}
+#leagueWrap{margin-top:8px !important;flex:0 1 auto;min-height:0;max-height:min(34vh,240px);display:flex;flex-direction:column;overflow:hidden}
+#leagueWrap h2{font-size:12px;margin-bottom:4px;flex:0 0 auto}
+.league-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#leagueWrap .clearbtn{flex:0 0 auto;margin-top:6px}
 table.league td{font-size:14px;padding:3px 5px}
 table.league th{padding:0 5px 2px;font-size:11px}
+table.league thead th{position:sticky;top:0;background:var(--slate);z-index:1}
 .tip{font-size:12px;padding:6px 8px;margin:0 0 6px}
 
 /* match chrome */
@@ -191,9 +194,11 @@ table.league tr:last-child td{border-bottom:none}
 
     <button class="throw" id="start">Start the match</button>
 
-    <div class="field hide" id="leagueWrap" style="margin-top:18px">
+    <div class="field hide" id="leagueWrap">
       <h2>League table — every match played on this phone</h2>
-      <table class="league" id="league"></table>
+      <div class="league-scroll">
+        <table class="league" id="league"></table>
+      </div>
       <button class="clearbtn" id="clearLeague">Clear the table</button>
     </div>
   </section>
