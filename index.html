@@ -71,6 +71,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-
 .seg button{flex:1;min-width:58px;padding:10px 8px;border:1px solid var(--line);background:var(--slate-2);border-radius:var(--r);font-family:Oswald,sans-serif;font-size:16px}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--slate);border-color:var(--ink)}
 .players{display:grid;gap:6px;margin-top:6px}
+.roster{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.roster.hide{display:none}
+.roster button{padding:7px 11px;border:1px solid var(--line);background:var(--slate-2);border-radius:999px;font-size:13.5px;color:var(--ink)}
+.roster button:active{background:var(--ink);color:var(--slate);border-color:var(--ink)}
 .prow{display:flex;gap:8px;align-items:center}
 .prow .pip{font-family:Oswald,sans-serif;color:var(--wire);width:14px;text-align:center}
 input[type=text]{flex:1;min-width:0;padding:9px 11px;background:transparent;border:1px solid var(--line);border-bottom:2px solid var(--wire);border-radius:var(--r);color:var(--ink);font-size:16px}
@@ -180,6 +184,7 @@ table.league tr:last-child td{border-bottom:none}
       <h2>Who's throwing</h2>
       <div class="seg" id="count"></div>
       <div class="players" id="players"></div>
+      <div class="roster hide" id="roster"></div>
     </div>
 
     <button class="throw" id="start">Start the match</button>
@@ -311,21 +316,32 @@ function standing(name){
 }
 function drawLeague(){
   var t=loadLeague(), rows=Object.keys(t).map(function(k){return t[k];});
-  if(!rows.length){ el("leagueWrap").classList.add("hide"); return; }
+  if(!rows.length){ el("leagueWrap").classList.add("hide"); drawRoster(); return; }
   el("leagueWrap").classList.remove("hide");
   rows.sort(function(a,b){ return (b.won-a.won) || (b.won/b.played - a.won/a.played) || (b.played-a.played); });
   el("league").innerHTML='<thead><tr><th>Player</th><th>Played</th><th>Won</th><th>Win rate</th></tr></thead><tbody>'+
     rows.map(function(r){
       return '<tr><td>'+r.name+'</td><td>'+r.played+'</td><td>'+r.won+'</td><td>'+Math.round(r.won/r.played*100)+'%</td></tr>';
     }).join("")+'</tbody>';
+  drawRoster();
 }
 
 var setup={game:"501",names:["Marc","Player 2"],doubleOut:true,legs:3};
-var M=null, entry="", KEY="oche:match";
+var M=null, entry="", KEY="oche:match", NKEY="oche:names";
 function el(id){return document.getElementById(id);}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(M));}catch(e){}}
 function load(){try{var r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return null;}}
 function wipe(){try{localStorage.removeItem(KEY);}catch(e){}}
+function loadNames(){
+  try{
+    var r=localStorage.getItem(NKEY); if(!r) return null;
+    var a=JSON.parse(r);
+    if(Array.isArray(a)&&a.length>=1&&a.length<=4) return a.map(function(n){return String(n);});
+  }catch(e){}
+  return null;
+}
+function saveNames(){ try{ localStorage.setItem(NKEY,JSON.stringify(setup.names)); }catch(e){} }
+(function(){ var n=loadNames(); if(n) setup.names=n; })();
 function snap(){M.history.push(JSON.stringify({p:M.p,turn:M.turn,starter:M.starter,over:M.over,winner:M.winner}));if(M.history.length>60)M.history.shift();}
 
 /* ---- setup ---- */
@@ -341,8 +357,40 @@ function drawCount(){
 }
 function drawPlayers(){
   el("players").innerHTML=setup.names.map(function(n,i){
-    return '<div class="prow"><span class="pip">'+(i+1)+'</span><input type="text" data-i="'+i+'" value="'+String(n).replace(/"/g,"&quot;")+'" placeholder="Name"></div>';
+    return '<div class="prow"><span class="pip">'+(i+1)+'</span><input type="text" data-i="'+i+'" value="'+String(n).replace(/"/g,"&quot;")+'" placeholder="Name" autocomplete="nickname"></div>';
   }).join("");
+  drawRoster();
+}
+function drawRoster(){
+  var wrap=el("roster"); if(!wrap) return;
+  var used={}; setup.names.forEach(function(n){ var k=lkey(n); if(k) used[k]=1; });
+  var t=loadLeague();
+  var chips=Object.keys(t).map(function(k){return t[k].name;}).filter(function(n){
+    return n && !used[lkey(n)];
+  }).sort(function(a,b){
+    var A=t[lkey(a)]||{played:0,won:0}, B=t[lkey(b)]||{played:0,won:0};
+    return (B.won-A.won)||(B.played-A.played)||a.localeCompare(b);
+  });
+  if(!chips.length){ wrap.classList.add("hide"); wrap.innerHTML=""; return; }
+  wrap.classList.remove("hide");
+  wrap.innerHTML=chips.map(function(n){
+    return '<button type="button" data-rn="'+String(n).replace(/"/g,"&quot;")+'">'+String(n).replace(/</g,"&lt;")+'</button>';
+  }).join("");
+}
+function applyRosterName(name){
+  name=(name||"").trim(); if(!name) return;
+  var i, slot=-1;
+  for(i=0;i<setup.names.length;i++){
+    var cur=(setup.names[i]||"").trim();
+    if(!cur || /^Player\s*\d+$/i.test(cur)){ slot=i; break; }
+  }
+  if(slot<0){
+    if(setup.names.length<4){ setup.names.push(name); }
+    else return;
+  } else {
+    setup.names[slot]=name;
+  }
+  saveNames(); drawCount(); drawPlayers();
 }
 function drawOpts(){
   var o=el("opts");
@@ -407,9 +455,10 @@ el("count").addEventListener("click",function(e){
   var n=+b.dataset.c;
   while(setup.names.length<n) setup.names.push("Player "+(setup.names.length+1));
   setup.names.length=n;
-  drawCount(); drawPlayers();
+  saveNames(); drawCount(); drawPlayers();
 });
-el("players").addEventListener("input",function(e){ if(e.target.dataset.i!==undefined) setup.names[+e.target.dataset.i]=e.target.value; });
+el("players").addEventListener("input",function(e){ if(e.target.dataset.i!==undefined){ setup.names[+e.target.dataset.i]=e.target.value; saveNames(); drawRoster(); } });
+el("roster").addEventListener("click",function(e){ var b=e.target.closest("button[data-rn]"); if(!b) return; applyRosterName(b.dataset.rn); });
 el("start").addEventListener("click",begin);
 el("resume").addEventListener("click",function(){ var s=load(); if(s){ M=s; M.history=M.history||[]; show(); } });
 
@@ -436,6 +485,7 @@ function begin(){
   M={game:setup.game,doubleOut:setup.doubleOut,legsTarget:setup.legs,start:start,
      turn:0,starter:0,over:null,winner:null,recorded:false,msg:"",history:[],
      p:names.map(function(n){return {name:n,score:start,legs:0,darts:0,scored:0,marks:{},pts:0,tgt:1,visit:0};})};
+  setup.names=names.slice(); saveNames();
   entry=""; show(); save();
 }
 function label(){
