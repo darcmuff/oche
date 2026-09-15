@@ -1,5 +1,5 @@
-/* Oche — keep the scorer usable with flaky pub Wi-Fi */
-var CACHE = 'oche-v4';
+/* DuffDarts — offline cache; HTML prefers network so updates land */
+var CACHE = 'oche-v5';
 var SHELL = ['./', './index.html', './sw.js'];
 
 self.addEventListener('install', function (e) {
@@ -34,12 +34,27 @@ self.addEventListener('fetch', function (e) {
   var font = url.hostname.indexOf('fonts.googleapis.com') !== -1 || url.hostname.indexOf('fonts.gstatic.com') !== -1;
   if (!same && !font) return;
 
+  var isDoc = e.request.mode === 'navigate' || (e.request.headers.get('accept') || '').indexOf('text/html') !== -1;
+
+  if (isDoc && same) {
+    // Network first so design updates show up; fall back to cache offline
+    e.respondWith(
+      fetch(e.request).then(function (res) {
+        return putInCache(e.request, res);
+      }).catch(function () {
+        return caches.match(e.request).then(function (cached) {
+          return cached || caches.match('./index.html');
+        });
+      })
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then(function (cached) {
       var net = fetch(e.request).then(function (res) {
         return putInCache(e.request, res);
       }).catch(function () { return cached; });
-      // Prefer cache for instant open; refresh in background when online
       return cached || net;
     })
   );
