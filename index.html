@@ -92,10 +92,14 @@ table.league th{padding:0 5px 2px;font-size:11px}
 .pl.on{background:var(--slate-2);box-shadow:inset 7px 0 0 var(--brass)}
 .pl .who{font-size:14px;font-weight:600;display:flex;gap:8px;align-items:center;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .pl .legs{font-family:Oswald,sans-serif;color:var(--brass);font-size:13px}
-.pl .rem{font-family:Oswald,sans-serif;line-height:.95;text-align:right;font-size:clamp(30px,7.2vh,52px)}
+.pl .rem{font-family:Oswald,sans-serif;line-height:.95;text-align:right;font-size:clamp(30px,7.2vh,52px);transition:letter-spacing .08s ease,filter .08s ease}
+.pl .rem.rem-land{letter-spacing:.045em;filter:blur(.35px)}
 .pl .meta{grid-column:1/2;font-size:11.5px;color:var(--ink-soft);min-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pl.on .meta{color:var(--green);font-family:Oswald,Impact,sans-serif;font-weight:600;font-size:clamp(16px,2.8vh,20px);letter-spacing:.02em;min-height:1.15em;line-height:1.15}
 .pl .avg{grid-column:2/3;text-align:right;font-size:11px;color:var(--ink-soft)}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+.entry.shake,.pl.on.shake{animation:shake .28s ease}
+@media (prefers-reduced-motion:reduce){.entry.shake,.pl.on.shake{animation:none}.pl .rem.rem-land{letter-spacing:0;filter:none}}
 
 /* controls fill the rest */
 #controls{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;padding-top:8px}
@@ -105,7 +109,7 @@ table.league th{padding:0 5px 2px;font-size:11px}
 .pad{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);gap:5px}
 .pad button{padding:0;border:1px solid var(--line);border-radius:var(--r);font-family:Oswald,sans-serif;font-size:clamp(18px,3.4vh,26px);background:var(--slate-2)}
 .pad .ok{background:var(--green);border-color:var(--green);color:#fff;grid-column:span 2}
-.pad .clr{background:transparent;color:var(--ink-soft);border-color:var(--line);font-size:clamp(13px,2.2vh,17px)}
+.pad .clr{background:transparent;color:var(--ink-soft);border-color:transparent;font-size:clamp(13px,2.2vh,17px);opacity:.55}
 .pad .no{background:transparent;color:var(--bust);border-color:var(--bust);font-size:clamp(13px,2.2vh,17px);opacity:.85}
 
 /* cricket */
@@ -488,6 +492,7 @@ document.addEventListener('visibilitychange',function(){
 
 /* ---- match ---- */
 function begin(){
+  resetRemDisp();
   var names=setup.names.map(function(n,i){return (n||"").trim()||("Player "+(i+1));});
   var g=setup.game;
   var start = g==="301"?301 : (g==="501"?501 : (g==="halve"?40 : 0));
@@ -536,6 +541,7 @@ function show(){
 }
 function toSetup(){
   letSleep();
+  resetRemDisp();
   el("mast").classList.remove("hide");
   el("match").classList.add("hide");
   el("setup").classList.remove("hide");
@@ -563,7 +569,7 @@ function submitScore(){
   var p=M.p[M.turn], rem=p.score-v;
   var bust = rem<0 || (M.doubleOut && rem===1);
   p.darts+=3;
-  if(bust){ M.msg=p.name+" bust on "+v+"."; next(); }
+  if(bust){ M.msg=p.name+" bust on "+v+"."; M.shake=1; next(); }
   else if(rem===0){
     p.scored+=v; p.score=0; p.legs++;
     if(p.legs>=M.legsTarget){ M.winner=p.name; M.over=p.name+" takes the match"; }
@@ -574,6 +580,7 @@ function submitScore(){
     }
   } else {
     p.scored+=v; p.score=rem;
+    if(v===0) M.shake=1;
     M.msg = v===180 ? "One hundred and eighty." : (v>=100? p.name+" hit "+v+"." : "");
     next();
   }
@@ -644,6 +651,55 @@ function halveScore(v, halved){
   entry=""; render(); save();
 }
 
+/* ---- rem roll (chalk counter) ---- */
+var remDisp=[], remRollId=0;
+function resetRemDisp(){ remDisp=[]; remRollId++; }
+function prefersReduce(){ try{ return window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){ return false; } }
+function easeRem(t){ return t*t*(3-2*t); }
+function rollRem(node, from, to){
+  from=+from; to=+to;
+  if(from===to || prefersReduce()){ node.textContent=String(to); return; }
+  var id=++remRollId; node.dataset.rid=String(id);
+  var ms=780, t0=performance.now();
+  node.classList.remove("rem-land");
+  function frame(now){
+    if(node.dataset.rid!==String(id)) return;
+    var u=Math.min(1,(now-t0)/ms), e=easeRem(u);
+    node.textContent=String(Math.round(from+(to-from)*e));
+    if(u<1) requestAnimationFrame(frame);
+    else{
+      node.textContent=String(to);
+      node.classList.add("rem-land");
+      setTimeout(function(){ if(node.dataset.rid===String(id)) node.classList.remove("rem-land"); }, 90);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+function syncRems(sb){
+  if(!sb) return;
+  var nodes=sb.querySelectorAll(".rem[data-i]");
+  for(var n=0;n<nodes.length;n++){
+    var node=nodes[n], i=+node.dataset.i, next=+node.dataset.to;
+    var prev=remDisp[i];
+    if(prev===undefined){ node.textContent=String(next); remDisp[i]=next; continue; }
+    remDisp[i]=next;
+    if(prev===next){ node.textContent=String(next); continue; }
+    node.textContent=String(prev);
+    rollRem(node, prev, next);
+  }
+}
+function maybeShake(sb){
+  if(!M || !M.shake) return;
+  M.shake=0;
+  if(prefersReduce()) return;
+  var target=el("entry") || (sb && sb.querySelector(".pl.on"));
+  if(!target) return;
+  target.classList.remove("shake");
+  void target.offsetWidth;
+  target.classList.add("shake");
+  setTimeout(function(){ target.classList.remove("shake"); }, 320);
+}
+
 /* ---- render ---- */
 function avg(p){ return p.darts? (p.scored/p.darts*3).toFixed(1)+" avg" : ""; }
 function render(){
@@ -674,15 +730,17 @@ function renderX01(sb,ct){
     var meta=on?(co?"Checkout: "+co:(p.score>lim?"":"No way out from "+p.score)):"";
     return '<div class="pl'+(on?" on":"")+'">'+
       '<div class="who">'+p.name+(M.legsTarget>1?' <span class="legs">'+p.legs+' / '+M.legsTarget+'</span>':'')+'</div>'+
-      '<div class="rem num">'+p.score+'</div>'+
+      '<div class="rem num" data-i="'+i+'" data-to="'+p.score+'">'+p.score+'</div>'+
       '<div class="meta">'+meta+'</div><div class="avg">'+avg(p)+'</div></div>';
   }).join("")+'</div>';
-  if(M.over){ ct.innerHTML=""; return; }
+  syncRems(sb);
+  if(M.over){ ct.innerHTML=""; maybeShake(sb); return; }
   ct.innerHTML='<div class="entry" id="entry">'+(entry===""?"&nbsp;":entry)+'</div>'+
     '<div class="quick">'+[26,41,45,60,81,100,140,180].map(function(n){return '<button data-q="'+n+'">'+n+'</button>';}).join("")+'</div>'+
     '<div class="pad">'+[1,2,3,4,5,6,7,8,9].map(function(n){return '<button data-k="'+n+'">'+n+'</button>';}).join("")+
       '<button data-k="0">0</button><button class="clr" data-k="c">Clear</button>'+
       '<button class="no" data-k="b">No score</button><button class="ok" data-k="e">Enter</button></div>';
+  maybeShake(sb);
 }
 function renderCricket(sb,ct){
   sb.innerHTML="";
@@ -714,9 +772,10 @@ function renderRoundBoard(sb, title){
     var on=i===M.turn&&!M.over;
     return '<div class="pl'+(on?" on":"")+'">'+
       '<div class="who">'+p.name+'</div>'+
-      '<div class="rem num">'+p.score+'</div>'+
+      '<div class="rem num" data-i="'+i+'" data-to="'+p.score+'">'+p.score+'</div>'+
       '<div class="meta">'+(on?title:"")+'</div><div class="avg"></div></div>';
   }).join("")+'</div>';
+  syncRems(sb);
 }
 function renderShanghai(sb,ct){
   var n=shTarget();
