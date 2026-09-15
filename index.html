@@ -612,6 +612,11 @@ document.addEventListener("keydown",function(e){
 /* ---- resume ---- */
 var saved=load();
 if(saved&&saved.p&&saved.p.length&&!saved.over) el("resumeRow").classList.remove("hide");
+
+/* ---- offline ---- */
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("./sw.js").catch(function(){});
+}
 })();
 </script>
 </body>
