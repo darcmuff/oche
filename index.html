@@ -72,12 +72,15 @@ input[type=text]{flex:1;min-width:0;padding:7px 10px;background:transparent;bord
 .resume{width:100%;padding:10px;margin-bottom:6px;border:2px solid var(--brass);color:var(--brass);border-radius:var(--r);font-size:14px;font-weight:600;flex:0 0 auto}
 .resumerow{display:flex;gap:8px;align-items:stretch;margin-bottom:6px;flex:0 0 auto}
 .resumerow .resume{margin-bottom:0;flex:1}
-#leagueWrap{margin-top:6px !important;flex:0 1 auto;min-height:0;max-height:min(22vh,160px);display:flex;flex-direction:column;overflow:hidden}
-#leagueWrap h2{font-size:12px;margin-bottom:4px;flex:0 0 auto}
-.league-scroll{flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
-#leagueWrap .clearbtn{flex:0 0 auto;margin-top:6px}
-table.league td{font-size:14px;padding:3px 5px}
-table.league th{padding:0 5px 2px;font-size:11px}
+/* league is its own full pane — home stays locked */
+.league-link{width:100%;margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--slate-2);color:var(--ink);font-size:14px;font-weight:600;flex:0 0 auto;text-align:left}
+.league-link .meta{float:right;color:var(--ink-soft);font-weight:500;font-size:13px}
+#leaguePane{overflow:hidden}
+#leaguePane .league-scroll{flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+#leaguePane .league-empty{color:var(--ink-soft);font-size:14px;line-height:1.4;padding:12px 4px}
+#leaguePane .clearbtn{flex:0 0 auto;margin-top:10px;align-self:flex-start}
+table.league td{font-size:15px;padding:6px 6px}
+table.league th{padding:0 6px 4px;font-size:11.5px}
 table.league thead th{position:sticky;top:0;background:var(--slate);z-index:1}
 .tip{font-size:12px;padding:5px 8px;margin:0 0 6px;flex:0 0 auto;line-height:1.25}
 
@@ -141,7 +144,7 @@ table.ck tfoot td{font-family:Oswald,sans-serif;font-size:19px;background:var(--
 .hitmiss .hit{background:var(--green);border-color:var(--green);color:#fff}
 .handover{flex:0 0 auto;width:100%;padding:13px;border:1px solid var(--ink);background:var(--ink);color:var(--slate);border-radius:var(--r);font-family:Oswald,sans-serif;font-size:17px}
 
-table.league{width:100%;border-collapse:collapse;margin-bottom:8px}
+table.league{width:100%;border-collapse:collapse;margin-bottom:0}
 table.league th{font-family:Karla,sans-serif;font-size:11.5px;font-weight:400;font-style:italic;color:var(--ink-soft);text-align:right;padding:0 6px 4px;border-bottom:1px solid var(--line)}
 table.league th:first-child{text-align:left}
 table.league td{font-family:Oswald,sans-serif;font-size:17px;text-align:right;padding:5px 6px;border-bottom:1px solid var(--line)}
@@ -194,14 +197,22 @@ table.league tr:last-child td{border-bottom:none}
     </div>
 
     <button class="throw" id="start">Start the match</button>
+    <button type="button" class="league-link hide" id="leagueBtn">League table <span class="meta" id="leagueMeta"></span></button>
+  </section>
 
-    <div class="field hide" id="leagueWrap">
-      <h2>League table — every match played on this phone</h2>
-      <div class="league-scroll">
-        <table class="league" id="league"></table>
-      </div>
-      <button class="clearbtn" id="clearLeague">Clear the table</button>
+  <!-- LEAGUE -->
+  <section id="leaguePane" class="pane hide">
+    <div class="matchbar">
+      <button type="button" id="leagueBack">‹ Games</button>
+      <span class="title">League</span>
+      <span style="width:44px"></span>
     </div>
+    <p class="note" style="text-align:left;margin:0 0 8px;flex:0 0 auto">Every match played on this phone</p>
+    <div class="league-scroll">
+      <table class="league" id="league"></table>
+      <p class="league-empty hide" id="leagueEmpty">No matches recorded yet. Play a game and winners show up here.</p>
+    </div>
+    <button type="button" class="clearbtn hide" id="clearLeague">Clear the table</button>
   </section>
 
   <!-- MATCH -->
@@ -326,12 +337,32 @@ function standing(name){
   var row=loadLeague()[lkey(name)];
   return row? row.won+" from "+row.played : null;
 }
-function drawLeague(){
+function leagueRows(){
   var t=loadLeague(), rows=Object.keys(t).map(function(k){return t[k];});
-  if(!rows.length){ el("leagueWrap").classList.add("hide"); drawRoster(); return; }
-  el("leagueWrap").classList.remove("hide");
   rows.sort(function(a,b){ return (b.won-a.won) || (b.won/b.played - a.won/a.played) || (b.played-a.played); });
-  el("league").innerHTML='<thead><tr><th>Player</th><th>Played</th><th>Won</th><th>Win rate</th></tr></thead><tbody>'+
+  return rows;
+}
+function updateLeagueBtn(){
+  var btn=el("leagueBtn"), meta=el("leagueMeta");
+  if(!btn) return;
+  var rows=leagueRows(), n=rows.length;
+  btn.classList.toggle("hide", n===0);
+  if(meta) meta.textContent = n ? (n+" player"+(n===1?"":"s")) : "";
+}
+function drawLeague(){
+  var rows=leagueRows();
+  var empty=el("leagueEmpty"), clr=el("clearLeague"), table=el("league");
+  updateLeagueBtn();
+  if(!rows.length){
+    if(table) table.innerHTML="";
+    if(empty) empty.classList.remove("hide");
+    if(clr) clr.classList.add("hide");
+    drawRoster();
+    return;
+  }
+  if(empty) empty.classList.add("hide");
+  if(clr){ clr.classList.remove("hide"); clr.textContent="Clear the table"; }
+  table.innerHTML='<thead><tr><th>Player</th><th>Played</th><th>Won</th><th>Win rate</th></tr></thead><tbody>'+
     rows.map(function(r){
       return '<tr><td>'+r.name+'</td><td>'+r.played+'</td><td>'+r.won+'</td><td>'+Math.round(r.won/r.played*100)+'%</td></tr>';
     }).join("")+'</tbody>';
@@ -457,13 +488,18 @@ drawGames(); drawCount(); drawPlayers(); drawOpts(); drawLeague();
       clearTimeout(t); saveLeague(backup); backup=null;
       btn.textContent="Clear the table"; drawLeague(); return;
     }
-    backup=loadLeague(); saveLeague({}); drawLeague();
-    btn.classList.remove("hide"); el("leagueWrap").classList.remove("hide");
+    backup=loadLeague(); saveLeague({});
     el("league").innerHTML="";
+    el("leagueEmpty").classList.remove("hide");
     btn.textContent="Undo that";
+    updateLeagueBtn();
+    drawRoster();
     t=setTimeout(function(){ backup=null; btn.textContent="Clear the table"; drawLeague(); },8000);
   });
 })();
+el("leagueBtn").addEventListener("click", showLeague);
+el("leagueBack").addEventListener("click", toSetup);
+if(location.hash==="#league"){ setTimeout(showLeague, 0); }
 
 el("games").addEventListener("click",function(e){var b=e.target.closest(".game");if(!b)return;setup.game=b.dataset.g;drawGames();drawOpts();});
 el("opts").addEventListener("click",function(e){
@@ -544,20 +580,32 @@ function advanceRoundGame(){
 function show(){
   el("mast").classList.add("hide");
   el("setup").classList.add("hide");
+  el("leaguePane").classList.add("hide");
   el("match").classList.remove("hide");
   el("gname").textContent=label();
   render();
   keepAwake();
+}
+function showLeague(){
+  letSleep();
+  el("mast").classList.add("hide");
+  el("setup").classList.add("hide");
+  el("match").classList.add("hide");
+  el("leaguePane").classList.remove("hide");
+  drawLeague();
+  try{ history.replaceState(null,"","#league"); }catch(e){}
 }
 function toSetup(){
   letSleep();
   resetRemDisp();
   el("mast").classList.remove("hide");
   el("match").classList.add("hide");
+  el("leaguePane").classList.add("hide");
   el("setup").classList.remove("hide");
   el("resumeRow").classList.toggle("hide", !(M && !M.over));
   if(M && !M.over){ var tip=el("tip"); if(tip) tip.classList.add("hide"); }
   drawLeague();
+  try{ if(location.hash==="#league") history.replaceState(null,"",location.pathname+location.search); }catch(e){}
 }
 function dropMatch(){ M=null; wipe(); toSetup(); }
 el("abandon").addEventListener("click",dropMatch);
@@ -719,7 +767,7 @@ function render(){
     if(!M.recorded){ record(M.winner); }
     var rec=standing(M.winner);
     w.className="win";
-    w.innerHTML='<h2>'+M.over+'</h2><p>Game shot'+(rec?" — "+M.winner+" now "+rec:"")+'. Tap “Games” to set up another.</p>';
+    w.innerHTML='<h2>'+M.over+'</h2><p>Game shot'+(rec?" — "+M.winner+" now "+rec:"")+'. Tap “Games” for another, or open League from the home screen.</p>';
   }
   else {
     if(M.recorded && M.winner) unrecord(M.winner);
