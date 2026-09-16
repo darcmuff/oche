@@ -98,8 +98,8 @@ table.league thead th{position:sticky;top:0;background:var(--slate);z-index:1}
 .matchbar button{min-width:44px;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:13.5px;background:var(--slate-2)}
 .matchbar .title{font-family:Oswald,sans-serif;font-size:16px;letter-spacing:.02em;color:var(--ink-soft);text-align:center;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* scoreboard */
-#scoreboard{flex:0 0 auto}
+/* scoreboard — shrinks when many players; never steal keypad space */
+#scoreboard{flex:0 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .board{border-top:1px solid var(--line);border-bottom:2px solid var(--ink)}
 .pl{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:10px;padding:6px 8px 6px 10px;border-bottom:1px solid var(--line)}
 .pl:last-child{border-bottom:none}
@@ -108,20 +108,28 @@ table.league thead th{position:sticky;top:0;background:var(--slate);z-index:1}
 .pl .legs{font-family:Oswald,sans-serif;color:var(--brass);font-size:13px}
 .pl .rem{font-family:Oswald,sans-serif;line-height:.95;text-align:right;font-size:clamp(30px,7.2vh,52px);transition:letter-spacing .08s ease,filter .08s ease}
 .pl .rem.rem-land{letter-spacing:.045em;filter:blur(.35px)}
-.pl .meta{grid-column:1/2;font-size:11.5px;color:var(--ink-soft);min-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pl.on .meta{color:var(--green);font-family:Oswald,Impact,sans-serif;font-weight:600;font-size:clamp(16px,2.8vh,20px);letter-spacing:.02em;min-height:1.15em;line-height:1.15}
+.pl .meta{grid-column:1/2;font-size:11.5px;color:var(--ink-soft);min-height:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl.on .meta{color:var(--green);font-family:Oswald,Impact,sans-serif;font-weight:600;font-size:clamp(16px,2.8vh,20px);letter-spacing:.02em;min-height:0;line-height:1.15}
+.pl .meta:empty,.pl.on .meta:empty{display:none} /* kill empty green/meta dead bar */
 .pl .avg{grid-column:2/3;text-align:right;font-size:11px;color:var(--ink-soft)}
+/* 3–4 players: squeeze scoreboard, not the pad */
+#match[data-pc="3"] .pl,#match[data-pc="4"] .pl{padding:3px 6px 3px 8px;column-gap:8px}
+#match[data-pc="3"] .pl .rem{font-size:clamp(24px,5.2vh,40px)}
+#match[data-pc="4"] .pl .rem{font-size:clamp(20px,4.4vh,34px)}
+#match[data-pc="3"] .pl .who,#match[data-pc="4"] .pl .who{font-size:13px}
+#match[data-pc="3"] .pl.on .meta,#match[data-pc="4"] .pl.on .meta{font-size:clamp(13px,2.2vh,16px)}
+#match[data-pc="3"] .pl .avg,#match[data-pc="4"] .pl .avg{font-size:10px}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
 .entry.shake,.pl.on.shake{animation:shake .28s ease}
 @media (prefers-reduced-motion:reduce){.entry.shake,.pl.on.shake{animation:none}.pl .rem.rem-land{letter-spacing:0;filter:none}}
 
-/* controls fill the rest */
-#controls{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;padding-top:8px}
+/* controls + pad — floor size ≈ comfortable 2-player; never shrink below that */
+#controls{flex:1 0 auto;min-height:min(52vh,420px);display:flex;flex-direction:column;gap:6px;padding-top:6px}
 .entry{font-family:Oswald,sans-serif;font-size:clamp(26px,5vh,40px);text-align:center;border:1px solid var(--line);border-bottom:3px solid var(--brass);background:var(--slate-2);border-radius:var(--r);flex:0 0 auto;padding:2px;min-height:46px;display:flex;align-items:center;justify-content:center}
 .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;flex:0 0 auto}
 .quick button{min-height:44px;padding:10px 0;border:1px solid var(--line);border-radius:var(--r);font-family:Oswald,sans-serif;font-size:15px;background:var(--slate-2)}
-.pad{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);gap:5px}
-.pad button{padding:0;border:1px solid var(--line);border-radius:var(--r);font-family:Oswald,sans-serif;font-size:clamp(18px,3.4vh,26px);background:var(--slate-2)}
+.pad{flex:1 0 auto;min-height:min(36vh,280px);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,minmax(52px,1fr));gap:5px}
+.pad button{padding:0;min-height:52px;border:1px solid var(--line);border-radius:var(--r);font-family:Oswald,sans-serif;font-size:clamp(18px,3.4vh,26px);background:var(--slate-2)}
 .pad .ok{background:var(--green);border-color:var(--green);color:#fff;grid-column:span 2}
 .pad .clr{background:transparent;color:var(--ink-soft);border-color:transparent;font-size:clamp(13px,2.2vh,17px);opacity:.55}
 .pad .no{background:transparent;color:var(--bust);border-color:var(--bust);font-size:clamp(13px,2.2vh,17px);opacity:.85}
@@ -782,6 +790,7 @@ function maybeShake(sb){
 function avg(p){ return p.darts? (p.scored/p.darts*3).toFixed(1)+" avg" : ""; }
 function render(){
   var sb=el("scoreboard"), ct=el("controls"), w=el("winner");
+  if(M && M.p) el("match").setAttribute("data-pc", String(M.p.length));
   if(M.over){
     if(!M.recorded){ record(M.winner); }
     var rec=standing(M.winner);
