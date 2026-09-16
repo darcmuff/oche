@@ -1,5 +1,5 @@
 /* DuffDarts — offline cache; HTML prefers network so updates land */
-var CACHE = 'oche-v20';
+var CACHE = 'oche-v21';
 var SHELL = ['./', './index.html', './sw.js'];
 
 self.addEventListener('install', function (e) {
