@@ -124,13 +124,14 @@ table.league thead th{position:sticky;top:0;background:var(--slate);z-index:1}
 @media (prefers-reduced-motion:reduce){.entry.shake,.pl.on.shake{animation:none}.pl .rem.rem-land{letter-spacing:0;filter:none}}
 
 /* controls + pad — floor size ≈ comfortable 2-player; never shrink below that */
-#controls{flex:1 0 auto;min-height:min(52vh,420px);display:flex;flex-direction:column;gap:6px;padding-top:6px}
-.entry{font-family:Oswald,sans-serif;font-size:clamp(26px,5vh,40px);text-align:center;border:1px solid var(--line);border-bottom:3px solid var(--brass);background:var(--slate-2);border-radius:var(--r);flex:0 0 auto;padding:2px;min-height:46px;display:flex;align-items:center;justify-content:center}
+#controls{flex:1 0 auto;min-height:min(52vh,420px);display:flex;flex-direction:column;gap:6px;padding-top:4px}
 .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;flex:0 0 auto}
 .quick button{min-height:44px;padding:10px 0;border:1px solid var(--line);border-radius:var(--r);font-family:Oswald,sans-serif;font-size:15px;background:var(--slate-2)}
-.pad{flex:1 0 auto;min-height:min(36vh,280px);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,minmax(52px,1fr));gap:5px}
-.pad button{padding:0;min-height:52px;border:1px solid var(--line);border-radius:var(--r);font-family:Oswald,sans-serif;font-size:clamp(18px,3.4vh,26px);background:var(--slate-2)}
-.pad .ok{background:var(--green);border-color:var(--green);color:#fff;grid-column:span 2}
+/* pad: 3×3 digits, 0/Clear/No, then entry | Enter (Enter stays fat on the right) */
+.pad{flex:1 0 auto;min-height:min(36vh,280px);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,minmax(48px,1fr)) minmax(48px,1fr) minmax(52px,1fr);gap:5px}
+.pad button{padding:0;min-height:48px;border:1px solid var(--line);border-radius:var(--r);font-family:Oswald,sans-serif;font-size:clamp(18px,3.4vh,26px);background:var(--slate-2)}
+.pad .entry{grid-column:1 / span 1;min-height:52px;font-family:Oswald,sans-serif;font-size:clamp(22px,4vh,32px);text-align:center;border:1px solid var(--line);border-bottom:3px solid var(--brass);background:var(--slate-2);border-radius:var(--r);padding:0 6px;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.pad .ok{grid-column:2 / span 2;background:var(--green);border-color:var(--green);color:#fff;min-height:52px;font-size:clamp(18px,3.2vh,24px)}
 .pad .clr{background:transparent;color:var(--ink-soft);border-color:transparent;font-size:clamp(13px,2.2vh,17px);opacity:.55}
 .pad .no{background:transparent;color:var(--bust);border-color:var(--bust);font-size:clamp(13px,2.2vh,17px);opacity:.85}
 
@@ -822,11 +823,12 @@ function renderX01(sb,ct){
   }).join("")+'</div>';
   syncRems(sb);
   if(M.over){ ct.innerHTML=""; maybeShake(sb); return; }
-  ct.innerHTML='<div class="entry" id="entry">'+(entry===""?"&nbsp;":entry)+'</div>'+
-    '<div class="quick">'+[26,41,45,60,81,100,140,180].map(function(n){return '<button data-q="'+n+'">'+n+'</button>';}).join("")+'</div>'+
+  ct.innerHTML='<div class="quick">'+[26,41,45,60,81,100,140,180].map(function(n){return '<button data-q="'+n+'">'+n+'</button>';}).join("")+'</div>'+
     '<div class="pad">'+[1,2,3,4,5,6,7,8,9].map(function(n){return '<button data-k="'+n+'">'+n+'</button>';}).join("")+
       '<button data-k="0">0</button><button class="clr" data-k="c">Clear</button>'+
-      '<button class="no" data-k="b">No score</button><button class="ok" data-k="e">Enter</button></div>';
+      '<button class="no" data-k="b">No score</button>'+
+      '<div class="entry" id="entry">'+(entry===""?"&nbsp;":entry)+'</div>'+
+      '<button class="ok" data-k="e">Enter</button></div>';
   maybeShake(sb);
 }
 function renderCricket(sb,ct){
@@ -877,10 +879,11 @@ function renderShanghai(sb,ct){
     '<button data-sh="'+(6*n)+'" data-shanghai="1">Shanghai</button>'+
     '<button data-sh="'+(9*n)+'">3×T</button>'+
     '</div>'+
-    '<div class="entry" id="entry">'+(entry===""?"&nbsp;":entry)+'</div>'+
     '<div class="pad">'+[1,2,3,4,5,6,7,8,9].map(function(k){return '<button data-k="'+k+'">'+k+'</button>';}).join("")+
       '<button data-k="0">0</button><button class="clr" data-k="c">Clear</button>'+
-      '<button class="no" data-k="b">Miss</button><button class="ok" data-k="sh">Enter</button></div>';
+      '<button class="no" data-k="b">Miss</button>'+
+      '<div class="entry" id="entry">'+(entry===""?"&nbsp;":entry)+'</div>'+
+      '<button class="ok" data-k="sh">Enter</button></div>';
   if(!M.over) M.msg = M.msg || (M.p[M.turn].name+" — hit "+n+"s");
 }
 function renderHalve(sb,ct){
@@ -894,10 +897,11 @@ function renderHalve(sb,ct){
     '<button data-hv="0" data-halve="1">Halve</button>'+
     singles.map(function(v,i){return '<button data-hv="'+v+'">'+labels[i]+'</button>';}).join("")+
     '</div>'+
-    '<div class="entry" id="entry">'+(entry===""?"&nbsp;":entry)+'</div>'+
     '<div class="pad">'+[1,2,3,4,5,6,7,8,9].map(function(k){return '<button data-k="'+k+'">'+k+'</button>';}).join("")+
       '<button data-k="0">0</button><button class="clr" data-k="c">Clear</button>'+
-      '<button class="no" data-k="hv0">Halve</button><button class="ok" data-k="hv">Enter</button></div>';
+      '<button class="no" data-k="hv0">Halve</button>'+
+      '<div class="entry" id="entry">'+(entry===""?"&nbsp;":entry)+'</div>'+
+      '<button class="ok" data-k="hv">Enter</button></div>';
   if(!M.over) M.msg = M.msg || (M.p[M.turn].name+" — "+lab+" or halve");
 }
 
