@@ -72,9 +72,16 @@ input[type=text]{flex:1;min-width:0;padding:7px 10px;background:transparent;bord
 .resume{width:100%;padding:10px;margin-bottom:6px;border:2px solid var(--brass);color:var(--brass);border-radius:var(--r);font-size:14px;font-weight:600;flex:0 0 auto}
 .resumerow{display:flex;gap:8px;align-items:stretch;margin-bottom:6px;flex:0 0 auto}
 .resumerow .resume{margin-bottom:0;flex:1}
-/* league is its own full pane — home stays locked */
-.league-link{width:100%;margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--slate-2);color:var(--ink);font-size:14px;font-weight:600;flex:0 0 auto;text-align:left}
-.league-link .meta{float:right;color:var(--ink-soft);font-weight:500;font-size:13px}
+/* home: compact tappable preview → full league pane */
+.league-preview{display:block;width:100%;margin-top:6px;padding:8px 10px 6px;border:1px solid var(--line);border-radius:var(--r);background:var(--slate-2);color:inherit;text-align:left;flex:0 0 auto;cursor:pointer}
+.league-preview.hide{display:none!important}
+.league-preview:active{border-color:var(--brass)}
+.league-preview-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:4px}
+.league-preview-head h2{font-size:12px;font-weight:600;color:var(--ink-soft);margin:0;font-family:Karla,sans-serif;font-style:italic}
+.league-preview-go{font-size:12px;color:var(--brass);font-weight:600;white-space:nowrap}
+.league-preview-body{max-height:min(22vh,140px);overflow:hidden;pointer-events:none}
+.league-preview .league td{font-size:14px;padding:3px 5px}
+.league-preview .league th{padding:0 5px 2px;font-size:11px}
 #leaguePane{overflow:hidden}
 #leaguePane .league-scroll{flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
 #leaguePane .league-empty{color:var(--ink-soft);font-size:14px;line-height:1.4;padding:12px 4px}
@@ -197,7 +204,15 @@ table.league tr:last-child td{border-bottom:none}
     </div>
 
     <button class="throw" id="start">Start the match</button>
-    <button type="button" class="league-link hide" id="leagueBtn">League table <span class="meta" id="leagueMeta"></span></button>
+    <button type="button" class="league-preview hide" id="leaguePreview" aria-label="Open league table">
+      <div class="league-preview-head">
+        <h2>League table — every match on this phone</h2>
+        <span class="league-preview-go">Open ›</span>
+      </div>
+      <div class="league-preview-body">
+        <table class="league" id="leagueHome"></table>
+      </div>
+    </button>
   </section>
 
   <!-- LEAGUE -->
@@ -342,17 +357,23 @@ function leagueRows(){
   rows.sort(function(a,b){ return (b.won-a.won) || (b.won/b.played - a.won/a.played) || (b.played-a.played); });
   return rows;
 }
-function updateLeagueBtn(){
-  var btn=el("leagueBtn"), meta=el("leagueMeta");
-  if(!btn) return;
-  var rows=leagueRows(), n=rows.length;
-  btn.classList.toggle("hide", n===0);
-  if(meta) meta.textContent = n ? (n+" player"+(n===1?"":"s")) : "";
+function leagueTableHtml(rows){
+  return '<thead><tr><th>Player</th><th>Played</th><th>Won</th><th>Win rate</th></tr></thead><tbody>'+
+    rows.map(function(r){
+      return '<tr><td>'+r.name+'</td><td>'+r.played+'</td><td>'+r.won+'</td><td>'+Math.round(r.won/r.played*100)+'%</td></tr>';
+    }).join("")+'</tbody>';
+}
+function updateLeaguePreview(){
+  var preview=el("leaguePreview"), home=el("leagueHome");
+  if(!preview) return;
+  var rows=leagueRows();
+  preview.classList.toggle("hide", rows.length===0);
+  if(home) home.innerHTML = rows.length ? leagueTableHtml(rows) : "";
 }
 function drawLeague(){
   var rows=leagueRows();
   var empty=el("leagueEmpty"), clr=el("clearLeague"), table=el("league");
-  updateLeagueBtn();
+  updateLeaguePreview();
   if(!rows.length){
     if(table) table.innerHTML="";
     if(empty) empty.classList.remove("hide");
@@ -362,10 +383,7 @@ function drawLeague(){
   }
   if(empty) empty.classList.add("hide");
   if(clr){ clr.classList.remove("hide"); clr.textContent="Clear the table"; }
-  table.innerHTML='<thead><tr><th>Player</th><th>Played</th><th>Won</th><th>Win rate</th></tr></thead><tbody>'+
-    rows.map(function(r){
-      return '<tr><td>'+r.name+'</td><td>'+r.played+'</td><td>'+r.won+'</td><td>'+Math.round(r.won/r.played*100)+'%</td></tr>';
-    }).join("")+'</tbody>';
+  if(table) table.innerHTML=leagueTableHtml(rows);
   drawRoster();
 }
 
@@ -492,12 +510,12 @@ drawGames(); drawCount(); drawPlayers(); drawOpts(); drawLeague();
     el("league").innerHTML="";
     el("leagueEmpty").classList.remove("hide");
     btn.textContent="Undo that";
-    updateLeagueBtn();
+    updateLeaguePreview();
     drawRoster();
     t=setTimeout(function(){ backup=null; btn.textContent="Clear the table"; drawLeague(); },8000);
   });
 })();
-el("leagueBtn").addEventListener("click", showLeague);
+el("leaguePreview").addEventListener("click", showLeague);
 el("leagueBack").addEventListener("click", toSetup);
 if(location.hash==="#league"){ setTimeout(showLeague, 0); }
 
